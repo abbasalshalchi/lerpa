@@ -268,6 +268,11 @@ The four that bite hardest, in the order people hit them:
 
 ### Everything else
 
+- **An outlined fill keeps its outline when `seam-fix` is off.** A merged
+  silhouette carries its own line rather than being drawn as strokes, because
+  which mesh edges lie on a silhouette changes every frame. That line is
+  artwork, not a hairline workaround, so it is drawn either way — `seam-fix`
+  only governs the fill-coloured hairline between abutting shapes.
 - **SVG optimisers strip `<metadata>`.** SVGO removes it by default, which
   deletes the animation and leaves a still image. Exclude these files, or set
   `removeMetadata: false`.
