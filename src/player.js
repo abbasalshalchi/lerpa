@@ -13,6 +13,14 @@
 
 const STROKE = 0;
 
+// Painter's order is resolved by sorting element indices on a depth scalar
+// every frame. A JS comparator costs n log n *calls* -- about 79,000 of them on
+// a 6,300-element frame -- so instead depth and index are packed into one double
+// and handed to the engine's native numeric sort, which takes no callback at
+// all. 30 bits of depth leaves the index room below it and the product well
+// inside a double's 53-bit mantissa.
+const DEPTH_STEPS = 1 << 30;
+
 const HEX_RE = /^#([0-9a-f]{3,8})$/i;
 const FUNC_RE = /^(rgba?|hsla?)\(([^)]*)\)$/i;
 
@@ -68,10 +76,12 @@ let probeCtx;   // lazily made once, module-level, only for the fallback below
  * server rendering still works.
  */
 function parseViaCanvas(css) {
-  if (typeof document === 'undefined') return null;
+  if (typeof document === 'undefined' && typeof OffscreenCanvas === 'undefined') return null;
   if (probeCtx === undefined) {
     try {
-      const c = document.createElement('canvas');
+      const c = typeof document !== 'undefined'
+        ? document.createElement('canvas')
+        : new OffscreenCanvas(1, 1);
       c.width = c.height = 1;                    // one pixel is all we read
       probeCtx = c.getContext('2d', { willReadFrequently: true });
     } catch { probeCtx = null; }
@@ -353,6 +363,12 @@ export class LerpaPlayer {
     }
 
     this._sorter = (a, b) => this.depths[b] - this.depths[a];
+    // Index needs its own bits under the depth; anything wider than the packing
+    // can hold falls back to the comparator rather than sorting wrongly.
+    let bits = 1;
+    while ((1 << bits) < this.elements.length + 1) bits++;
+    this._indexLimit = 1 << bits;
+    this._keys = bits <= 22 ? new Float64Array(this.elements.length) : null;
     this._tick = this._tick.bind(this);
     this.resize();
     if (this.canvas && typeof ResizeObserver !== 'undefined' && options.autoResize !== false) {
@@ -372,9 +388,28 @@ export class LerpaPlayer {
       return;
     }
     const dpr = (typeof window !== 'undefined' && window.devicePixelRatio) || 1;
+    // An OffscreenCanvas has no layout box, so there is nothing here to
+    // measure: whoever still holds the real element measures it and calls
+    // `resizeTo`. Until they do, the backing store it arrived with is the only
+    // size there is.
+    if (typeof this.canvas.getBoundingClientRect !== 'function') {
+      const d = this.dpr || 1;
+      return this.resizeTo(this.canvas.width / d, this.canvas.height / d, d);
+    }
     const rect = this.canvas.getBoundingClientRect();
-    const cw = Math.max(1, Math.round(rect.width || this.width));
-    const ch = Math.max(1, Math.round(rect.height || this.height));
+    return this.resizeTo(rect.width || this.width, rect.height || this.height, dpr);
+  }
+
+  /**
+   * Size the canvas and rebuild the view transform from numbers, not layout.
+   *
+   * Split out of `resize` so the drawing can live in a worker: measuring needs
+   * the DOM, applying does not.
+   */
+  resizeTo(cssWidth, cssHeight, dpr = this.dpr || 1) {
+    if (!this.canvas) return;
+    const cw = Math.max(1, Math.round(cssWidth));
+    const ch = Math.max(1, Math.round(cssHeight));
     this.canvas.width = Math.round(cw * dpr);
     this.canvas.height = Math.round(ch * dpr);
     const sx = cw / this.width, sy = ch / this.height;
@@ -467,6 +502,7 @@ export class LerpaPlayer {
     const els = this.elements, n = els.length;
     const scratch = this.scratch, depths = this.depths, order = this.order;
     let count = 0, i, el;
+    let dmin = Infinity, dmax = -Infinity;
 
     for (i = 0; i < n; i++) {
       el = els[i];
@@ -475,14 +511,43 @@ export class LerpaPlayer {
       if (a <= 0.004) continue;
       el.alpha = a > 1 ? 1 : a;
       el.geo.points(t, scratch, el.offset);
-      depths[i] = el.depth ? el.depth.scalar(t) : 0;
+      const d = el.depth ? el.depth.scalar(t) : 0;
+      depths[i] = d;
+      if (d < dmin) dmin = d;
+      if (d > dmax) dmax = d;
       order[count++] = i;
     }
     this.visible = count;
-
-    // subarray shares memory with `order`, so this sorts it in place
-    Array.prototype.sort.call(order.subarray(0, count), this._sorter);   // far -> near
+    if (count > 1) this._sortOrder(count, dmin, dmax);
     return count;
+  }
+
+  /**
+   * Put `order[0..count)` in painting sequence: farthest depth first.
+   *
+   * Depth is quantised into the high bits and the element index sits in the low
+   * ones, so one ascending numeric sort delivers both the ordering and the
+   * tie-break. Descending depth comes from storing `DEPTH_STEPS - q`, and equal
+   * depths fall back to ascending index -- which is what the stable comparator
+   * sort this replaces already did.
+   */
+  _sortOrder(count, dmin, dmax) {
+    const order = this.order, depths = this.depths, keys = this._keys;
+    if (!keys) {
+      // subarray shares memory with `order`, so this sorts it in place
+      Array.prototype.sort.call(order.subarray(0, count), this._sorter);
+      return;
+    }
+    const limit = this._indexLimit, span = dmax - dmin;
+    const scale = span > 0 ? DEPTH_STEPS / span : 0;
+    for (let k = 0; k < count; k++) {
+      const i = order[k];
+      const q = span > 0 ? (DEPTH_STEPS - (depths[i] - dmin) * scale) | 0 : 0;
+      keys[k] = q * limit + i;
+    }
+    const view = keys.subarray(0, count);
+    view.sort();                       // native, numeric, no callback
+    for (let k = 0; k < count; k++) order[k] = view[k] % limit;
   }
 
   /** Paint `count` already-solved elements under whatever transform ctx carries. */

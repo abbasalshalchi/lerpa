@@ -10,6 +10,7 @@
 
 export { LerpaPlayer, fetchDocument, parseDocument } from './player.js';
 export { LerpaPlayerElement, defineElement } from './element.js';
+export { mount as mountOffscreen, canOffscreen } from './offscreen.js';
 
 import { LerpaPlayer, fetchDocument } from './player.js';
 import { defineElement } from './element.js';
