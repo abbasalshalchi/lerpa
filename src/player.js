@@ -854,6 +854,22 @@ export class LerpaPlayer {
     return this;
   }
 
+  /** The same for many ids at once. `css` null clears them.
+   *
+   * Worth having its own method rather than a loop over `setElementColor`:
+   * that invalidates and repaints per id, so marking the Voyager's 253 merged
+   * fills would repaint the scene 253 times. Here it is one repaint.
+   */
+  setElementColors(ids, css) {
+    const rgb = css ? parseColor(css) : null;
+    for (const id of ids) {
+      if (rgb) this.elementColors.set(id, rgb);
+      else this.elementColors.delete(id);
+    }
+    this._invalidate();
+    return this;
+  }
+
   /** Fade or hide a whole named group. 0 hides it, 1 restores it.
    *
    * Multiplies the baked opacity rather than replacing it, so a part that the
