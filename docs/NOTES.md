@@ -100,6 +100,17 @@ straight across the part. See the wedge in the bug table above.
 
 ---
 
+## Licence
+
+From 0.5.0 (26 October 2026) the player is **MIT**. It was AGPL-3.0-or-later with a
+commercial licence for closed-source use, on the reasoning that AGPL is the condition a
+closed product cannot meet and so leaves something to sell. It left nothing to sell in
+practice: no company to sign a licence with, no lawyer to write one, and real downloads at
+zero. AGPL mainly kept away the people whose use of it would count. The project is now
+free and open source as a whole -- the Blender add-on stays GPL-3.0-or-later, as anything
+linking Blender's Python API must -- and baked files never carried any obligation.
+Versions up to 0.4.0 remain under the terms they were released with.
+
 ## Releases
 
 `npm publish` and `npm login` are run by the maintainer, never by an assistant, and no

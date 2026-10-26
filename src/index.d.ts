@@ -1,6 +1,5 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: MIT
 // Lerpa -- Copyright (C) 2026 Abbas Alshalchi
-// Also available under a commercial licence; see COMMERCIAL.md
 
 /** A parsed .lerpa: the artwork, the tracks, and both resting states. */
 export interface LerpaDocument {

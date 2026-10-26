@@ -305,11 +305,11 @@ OIDC. Full steps, and the things that trip you up, in **[RELEASING.md](./RELEASI
 
 ## Licence
 
-**AGPL-3.0-or-later** — see [LICENSE](./LICENSE). Free to use in open-source
-projects, personal work and evaluation.
-
-Shipping it inside a closed-source product needs a **commercial licence**, which
-lifts the AGPL's source-disclosure requirement. See [COMMERCIAL.md](./COMMERCIAL.md).
+**MIT** — see [LICENSE](./LICENSE). Use it anywhere, including in closed-source
+and commercial products, with no licence to buy and nothing to publish.
 
 **The `.svg` files you bake are yours.** Output carries no obligation from this
-project — only the runtime is licensed.
+project at all.
+
+Lerpa was AGPL-3.0-or-later with a commercial licence for closed-source use up to
+0.4.0; from 0.5.0 it is MIT.
