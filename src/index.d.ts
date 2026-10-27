@@ -124,8 +124,11 @@ export declare class LerpaPlayer {
   /** Recolour every element in a group. Live data binding, no re-bake. */
   setGroupColor(group: string, css: string): this;
   setElementColor(id: string, css: string | null): this;
-  /** The same for many ids, in one repaint. `null` clears them. */
-  setElementColors(ids: Iterable<string>, css: string | null): this;
+  /**
+   * The same for many ids, in one repaint. `null` clears them. Any iterable of
+   * ids but a bare string, which would be read as one id per character.
+   */
+  setElementColors(ids: Iterable<string> & object, css: string | null): this;
 
   /** Fade or hide a group. 0 hides, 1 restores, null drops the override. */
   setGroupOpacity(group: string, alpha: number | null): this;
