@@ -15,7 +15,7 @@ path, which is why `--provenance` is not passed anywhere.
 
 ## The four steps
 
-Run these from the `web` folder.
+Run these from the root of this repo, where `package.json` is.
 
 **1. Bump the version.** Pick one:
 
