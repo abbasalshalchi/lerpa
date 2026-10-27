@@ -55,7 +55,7 @@
     "node": ">=16"
   },
   "scripts": {
-    "test": "node -e \"import('./src/index.js').then(m=>{for(const k of ['LerpaPlayer','load','defineElement','fetchDocument','parseDocument'])if(!m[k])throw new Error('missing export: '+k);console.log('exports ok, ssr-safe')})\"",
+    "test": "node -e \"import('./src/index.js').then(m=>{for(const k of ['LerpaPlayer','load','defineElement','fetchDocument','parseDocument','mountOffscreen','canOffscreen'])if(!m[k])throw new Error('missing export: '+k);console.log('exports ok, ssr-safe')})\"",
     "prepublishOnly": "npm test"
   }
 }

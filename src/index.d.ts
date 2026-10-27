@@ -114,10 +114,18 @@ export declare class LerpaPlayer {
   drawInto(ctx: CanvasRenderingContext2D, t: number, transform?: LerpaTransform): void;
   /** Re-read the canvas size and re-fit. Called for you unless autoResize is off. */
   resize(): void;
+  /**
+   * Size the canvas from numbers rather than layout: CSS pixels and a device
+   * pixel ratio. `resize` measures and calls this; call it yourself where there
+   * is no layout to measure, as in a worker.
+   */
+  resizeTo(cssWidth: number, cssHeight: number, dpr?: number): void;
 
   /** Recolour every element in a group. Live data binding, no re-bake. */
   setGroupColor(group: string, css: string): this;
-  setElementColor(id: string, css: string): this;
+  setElementColor(id: string, css: string | null): this;
+  /** The same for many ids, in one repaint. `null` clears them. */
+  setElementColors(ids: Iterable<string>, css: string | null): this;
 
   /** Fade or hide a group. 0 hides, 1 restores, null drops the override. */
   setGroupOpacity(group: string, alpha: number | null): this;
@@ -184,6 +192,58 @@ export declare function load(
   target: HTMLElement | HTMLCanvasElement,
   options?: LerpaLoadOptions,
 ): Promise<LerpaPlayer>;
+
+export interface LerpaOffscreenOptions {
+  /** URL of the .lerpa for the worker to fetch. */
+  src?: string;
+  /** The .lerpa as text, when you already have it. Skips the worker's fetch. */
+  text?: string;
+  /** CSS colour painted before each frame. Defaults to the file's own. */
+  background?: string | null;
+  /** Default `'contain'`. */
+  fit?: 'contain' | 'cover' | 'stretch';
+  /** On by default, as for `LerpaPlayer`. */
+  seamFix?: boolean;
+  /** Device pixel ratio. Defaults to the window's. */
+  dpr?: number;
+  /** Called with the time of each frame once the worker has drawn it. */
+  onDrawn?: ((t: number) => void) | null;
+}
+
+/** A player running on a worker, driven by messages. */
+export interface LerpaOffscreenView {
+  /** Seconds. */
+  readonly duration: number;
+  readonly fps: number;
+  /** How many elements the document has. */
+  readonly elements: number;
+  /** Author-space size. */
+  readonly width: number;
+  readonly height: number;
+  /** Ask for a time. Faster than frames is fine: only the newest is drawn. */
+  seek(t: number): this;
+  /** Re-measure the canvas element here and pass the size to the worker. */
+  resize(): this;
+  /** Zoom and pan: CSS pixels per author unit, then an offset in CSS pixels. */
+  view(scaleX: number, scaleY: number, offX: number, offY: number, t?: number): this;
+  setBackground(value: string | null): this;
+  /** Write-only: replaces `onDrawn`. */
+  onframe: ((t: number) => void) | null;
+  destroy(): void;
+}
+
+/** True when this browser can play on a worker; fall back to `load` if not. */
+export declare function canOffscreen(): boolean;
+
+/**
+ * Hand a canvas to a worker and play there, so drawing never blocks input.
+ * Resolves once the first frame is drawn. The canvas is transferred for good:
+ * nothing else may draw to it afterwards, and there is no `pick()`.
+ */
+export declare function mountOffscreen(
+  canvas: HTMLCanvasElement,
+  options?: LerpaOffscreenOptions,
+): Promise<LerpaOffscreenView>;
 
 declare const _default: { load: typeof load; defineElement: typeof defineElement };
 export default _default;
